@@ -1,0 +1,15 @@
+{
+  "name": "scrap-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Skill /scrap — scrapea catálogos de marcas de ropa (Tienda Nube) a un reporte PDF+HTML, y compara scraps en el tiempo para estimar ventas.",
+  "type": "commonjs",
+  "license": "MIT",
+  "scripts": {
+    "scrape": "node scripts/scrape.js",
+    "compare": "node scripts/compare.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}
