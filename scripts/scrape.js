@@ -4,29 +4,32 @@
 // Detecta la plataforma automáticamente: Tienda Nube, Shopify, WooCommerce o
 // genérica (datos estructurados JSON-LD / Open Graph).
 //
-// Uso:  node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N] [--html-only]
+// Uso:  node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N] [--html-only] [--json]
 //   --out DIR    carpeta de salida (default: ./output)
 //   --fresh      ignora el cache local y vuelve a bajar todo
 //   --limit N    procesa solo N productos (prueba rápida)
 //   --html-only  no genera PDF (más rápido; el HTML tiene todos los datos)
+//   --json       además exporta el dataset crudo a un .json (uso programático)
 
 const fs = require("fs");
 const path = require("path");
 const { detectStore } = require("./lib/detect");
 const woocommerce = require("./lib/platforms/woocommerce");
 const generic = require("./lib/platforms/generic");
-const { buildCatalogHtml } = require("./lib/templates-catalog");
+const { buildCatalogHtml, buildDataset } = require("./lib/templates-catalog");
 const { renderPdf } = require("./lib/render");
+const { findChrome } = require("./lib/chrome");
 const { fmtInt, fmtDateTime, slug, stamp } = require("./lib/format");
 
 const CONCURRENCY = 3; // las tiendas tiran HTTP 429 si las apuramos; scraping respetuoso
 
 function parseArgs(argv) {
-  const a = { url: null, out: null, fresh: false, limit: Infinity, htmlOnly: false };
+  const a = { url: null, out: null, fresh: false, limit: Infinity, htmlOnly: false, json: false };
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i];
     if (v === "--fresh") a.fresh = true;
     else if (v === "--html-only") a.htmlOnly = true;
+    else if (v === "--json") a.json = true;
     else if (v === "--out") a.out = argv[++i];
     else if (v === "--limit") a.limit = parseInt(argv[++i], 10);
     else if (!a.url) a.url = v;
@@ -144,7 +147,7 @@ async function main() {
     maxPrice: maxes.length ? Math.max(...maxes) : null,
   };
 
-  const html = buildCatalogHtml({
+  const meta = {
     brand: brandFinal,
     source: base,
     platform: platform.id,
@@ -153,23 +156,36 @@ async function main() {
     scrapedAt,
     summary,
     products,
-  });
+  };
+  const html = buildCatalogHtml(meta);
 
   const baseName = `Scrap_${slug(brandFinal)}_${stamp(scrapedAt)}`;
   const htmlPath = path.join(OUT, baseName + ".html");
   const pdfPath = path.join(OUT, baseName + ".pdf");
+  const jsonPath = path.join(OUT, baseName + ".json");
   fs.writeFileSync(htmlPath, html);
+  if (args.json) fs.writeFileSync(jsonPath, JSON.stringify(buildDataset(meta), null, 2));
 
+  let pdfDone = false;
   if (!args.htmlOnly) {
-    console.log("· Generando PDF…");
-    await renderPdf(html, pdfPath, {
-      footerLeft: `Scrap ${brandFinal} · ${new URL(base).hostname} · ${fmtDateTime(scrapedAt)}`,
-    });
+    if (!findChrome()) {
+      console.warn(
+        "⚠ PDF omitido: no encontré Chrome/Chromium (el HTML tiene todos los datos).\n" +
+          "  Instalá Chrome o revisá CHROME_PATH si querés el PDF."
+      );
+    } else {
+      console.log("· Generando PDF…");
+      await renderPdf(html, pdfPath, {
+        footerLeft: `Scrap ${brandFinal} · ${new URL(base).hostname} · ${fmtDateTime(scrapedAt)}`,
+      });
+      pdfDone = true;
+    }
   }
 
   console.log("\n✓ Listo");
-  if (!args.htmlOnly) console.log("  PDF:  " + pdfPath);
+  if (pdfDone) console.log("  PDF:  " + pdfPath);
   console.log("  HTML: " + htmlPath);
+  if (args.json) console.log("  JSON: " + jsonPath);
   console.log(
     `  ${products.length} productos · ${
       summary.stockTotal != null ? `stock ${fmtInt(summary.stockTotal)} u. · ` : "stock no público · "

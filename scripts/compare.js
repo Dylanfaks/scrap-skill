@@ -2,10 +2,11 @@
 // compare.js — compara 2+ datasets de scrap de la misma marca (ordenados por su
 // fecha/hora) y estima ventas, generando un reporte PDF + HTML.
 //
-// Uso:  node scripts/compare.js <data1.json> <data2.json> [...] [--out DIR] [--html-only]
+// Uso:  node scripts/compare.js <scrap1.json|.html> <scrap2.json|.html> [...] [--out DIR] [--html-only]
 //
-// Cada JSON debe tener: { brand, scrapedAt (ISO), products:[{id,name,price,stock,soldQty?,available?}] }.
-// Es el mismo objeto que la skill embebe en cada HTML de catálogo (<script id="scrap-data">).
+// Acepta datasets JSON o directamente los HTML de catálogo que genera scrape.js
+// (extrae solo el dataset embebido <script id="scrap-data">).
+// Cada dataset tiene: { brand, scrapedAt (ISO), products:[{id,name,price,stock,soldQty?,available?}] }.
 //
 // Señales, de mejor a peor (se usa la mejor disponible por producto):
 //  1. delta de soldQty (Tienda Nube): ventas exactas del período, capta reposiciones.
@@ -16,6 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const { buildSalesHtml } = require("./lib/templates-sales");
 const { renderPdf } = require("./lib/render");
+const { findChrome } = require("./lib/chrome");
 const { slug, stamp, fmtDateTime } = require("./lib/format");
 
 const DAY = 86400000;
@@ -34,10 +36,34 @@ function parseArgs(argv) {
 
 // Valida y carga un dataset. Acumula TODOS los problemas del archivo antes de
 // reportar, para no obligar a corregir de a un error por corrida.
+// Dataset embebido en los HTML de catálogo que genera scrape.js.
+function datasetFromHtml(text) {
+  const m = text.match(/<script type="application\/json" id="scrap-data">([\s\S]*?)<\/script>/);
+  return m ? m[1] : null;
+}
+
 function loadDataset(file, errors) {
+  let raw;
+  try {
+    raw = fs.readFileSync(file, "utf8");
+  } catch (e) {
+    errors.push(`${path.basename(file)}: no pude leerlo (${e.message})`);
+    return null;
+  }
+  if (/\.html?$/i.test(file) || raw.trimStart().startsWith("<")) {
+    const embedded = datasetFromHtml(raw);
+    if (!embedded) {
+      errors.push(
+        `${path.basename(file)}: es HTML pero no trae el dataset embebido (id="scrap-data"). ` +
+          "Pasame el HTML de catálogo que genera scrape.js (no el reporte de ventas)."
+      );
+      return null;
+    }
+    raw = embedded;
+  }
   let d;
   try {
-    d = JSON.parse(fs.readFileSync(file, "utf8"));
+    d = JSON.parse(raw);
   } catch (e) {
     errors.push(`${path.basename(file)}: no es JSON válido (${e.message})`);
     return null;
@@ -263,15 +289,24 @@ async function main() {
   const pdfPath = path.join(OUT, baseName + ".pdf");
   fs.writeFileSync(htmlPath, html);
 
+  let pdfDone = false;
   if (!htmlOnly) {
-    console.log("· Generando reporte de ventas…");
-    await renderPdf(html, pdfPath, {
-      footerLeft: `Reporte de ventas · ${cmp.brand} · estimación · ${fmtDateTime(cmp.generatedAt)}`,
-    });
+    if (!findChrome()) {
+      console.warn(
+        "⚠ PDF omitido: no encontré Chrome/Chromium (el HTML tiene todos los datos).\n" +
+          "  Instalá Chrome o revisá CHROME_PATH si querés el PDF."
+      );
+    } else {
+      console.log("· Generando reporte de ventas…");
+      await renderPdf(html, pdfPath, {
+        footerLeft: `Reporte de ventas · ${cmp.brand} · estimación · ${fmtDateTime(cmp.generatedAt)}`,
+      });
+      pdfDone = true;
+    }
   }
 
   console.log("\n✓ Listo");
-  if (!htmlOnly) console.log("  PDF:  " + pdfPath);
+  if (pdfDone) console.log("  PDF:  " + pdfPath);
   console.log("  HTML: " + htmlPath);
   console.log(
     `  ${cmp.nScraps} scraps · ${cmp.firstAt.toLocaleDateString("es-AR")} → ${cmp.lastAt.toLocaleDateString(

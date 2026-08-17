@@ -60,7 +60,7 @@ function catalogo(products, platform, platformLabel, stockTotal) {
 test("catálogo: dataset embebido v2 con plataforma y moneda", () => {
   const html = catalogo([productoTN], "tiendanube", "Tienda Nube", 5);
   const d = JSON.parse(html.match(/id="scrap-data">(.*?)<\/script>/s)[1]);
-  assert.strictEqual(d.version, "2.0.0");
+  assert.strictEqual(d.version, "2.1.0");
   assert.strictEqual(d.platform, "tiendanube");
   assert.strictEqual(d.currency, "ARS");
   assert.strictEqual(d.products[0].stock, 5);

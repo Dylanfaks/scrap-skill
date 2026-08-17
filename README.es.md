@@ -50,10 +50,15 @@ variable de entorno `CHROME_PATH`.
 También podés usar los scripts sueltos, sin Claude Code:
 
 ```bash
-node scripts/scrape.js https://algunatienda.com          # catálogo completo
-node scripts/scrape.js algunatienda.com --limit 20       # prueba rápida
-node scripts/compare.js output/.compare/*.json           # estimación de ventas
+node scripts/scrape.js https://algunatienda.com          # catálogo completo (PDF + HTML)
+node scripts/scrape.js algunatienda.com --limit 20 --json  # prueba rápida + dataset JSON
+node scripts/compare.js output/Scrap_A.html output/Scrap_B.html   # estimación de ventas,
+                                                         # directo desde los HTML
 ```
+
+`compare.js` acepta los reportes HTML directamente (lee el dataset embebido), datasets
+JSON, o una mezcla. ¿No tenés Chrome? Los reportes salen igual en HTML — el PDF se
+omite con un aviso.
 
 ## ¿Cómo detecta la plataforma?
 

@@ -48,10 +48,15 @@ with the `CHROME_PATH` environment variable.
 You can also use the scripts standalone, without Claude Code:
 
 ```bash
-node scripts/scrape.js https://somestore.com            # full catalog
-node scripts/scrape.js somestore.com --limit 20         # quick test
-node scripts/compare.js output/.compare/*.json          # sales estimate
+node scripts/scrape.js https://somestore.com            # full catalog (PDF + HTML)
+node scripts/scrape.js somestore.com --limit 20 --json  # quick test + raw JSON dataset
+node scripts/compare.js output/Scrap_A.html output/Scrap_B.html   # sales estimate,
+                                                        # straight from the HTML reports
 ```
+
+`compare.js` accepts the HTML reports directly (it reads the embedded dataset), JSON
+datasets, or a mix. No Chrome installed? Reports still come out as HTML — the PDF is
+skipped with a warning.
 
 ## How does it detect the platform?
 

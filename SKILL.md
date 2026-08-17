@@ -44,26 +44,27 @@ Notes by platform (the script handles this alone; just relay it):
 - If the store can't be detected or has no structured data, the script says so clearly.
 
 Useful flags: `--limit N` (quick test), `--fresh` (ignore cache), `--html-only` (skip PDF),
-`--out DIR`.
+`--json` (also export the raw dataset), `--out DIR`. Without Chrome installed the script
+still delivers the HTML (it warns and skips the PDF).
 
 ## Comparison mode — `/scrap compare`
 
 The user attaches **2+** reports (PDF or HTML) generated earlier with `/scrap`, from
-**the same store**. Convert each into a JSON dataset and pass them to `compare.js`.
+**the same store**.
 
-**1. For each attached file, build its dataset** `{ "brand", "scrapedAt", "platform", "products":[...] }`:
-- **If it's an HTML from this skill:** it has `<script type="application/json" id="scrap-data">…</script>`.
-  That JSON **is** the dataset — copy it verbatim.
-- **If it's a PDF from this skill:** read the cover (*"Fecha y hora del scrap"* → `scrapedAt`)
-  and the *"Detalle por producto"* section. Per product build
-  `{ "id", "name", "price" (number), "stock" (total or null), "soldQty" ("Vendidas" row if present), "available" }`.
+**1. Prepare each attached file:**
+- **If it's an HTML from this skill:** nothing to do — `compare.js` accepts catalog HTML
+  files directly and extracts the embedded dataset itself.
+- **If it's a PDF from this skill:** build a JSON dataset by hand: read the cover
+  (*"Fecha y hora del scrap"* → `scrapedAt`) and the *"Detalle por producto"* section.
+  Per product build `{ "id", "name", "price" (number), "stock" (total or null),
+  "soldQty" ("Vendidas" row if present), "available" }`. Save it to
+  `./output/.compare/<n>.json`.
 - **If it's an old/external PDF without a date:** ask the user for that scrap's date (and time).
 
-Save each dataset to `./output/.compare/<n>.json`.
-
-**2. Run the comparison** with all datasets:
+**2. Run the comparison** — HTML files and JSON datasets can be mixed freely:
 ```bash
-node "{SKILL_DIR}/scripts/compare.js" ./output/.compare/*.json
+node "{SKILL_DIR}/scripts/compare.js" reporte1.html ./output/.compare/2.json [...]
 ```
 Generates `./output/Reporte_Ventas_<Brand>_<date_time>.pdf` + `.html`. Give the user the
 paths + the headline (estimated units and revenue — or, for stores without numeric stock,

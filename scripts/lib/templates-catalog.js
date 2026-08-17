@@ -127,7 +127,7 @@ function detailBlock(p) {
 function buildDataset(meta) {
   return {
     skill: "scrap",
-    version: "2.0.0",
+    version: "2.1.0",
     platform: meta.platform || "tiendanube",
     brand: meta.brand,
     source: meta.source,
@@ -259,4 +259,4 @@ function buildCatalogHtml(meta) {
 </body></html>`;
 }
 
-module.exports = { buildCatalogHtml };
+module.exports = { buildCatalogHtml, buildDataset };
