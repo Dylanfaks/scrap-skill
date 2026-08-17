@@ -1,111 +1,130 @@
 #!/usr/bin/env node
-// scrape.js — scrapea el catálogo de una tienda Tienda Nube y genera el reporte
-// PDF + HTML (con dataset embebido para la comparación posterior).
+// scrape.js — scrapea el catálogo público de una tienda online y genera el
+// reporte PDF + HTML (con dataset embebido para la comparación posterior).
+// Detecta la plataforma automáticamente: Tienda Nube, Shopify, WooCommerce o
+// genérica (datos estructurados JSON-LD / Open Graph).
 //
-// Uso:  node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N]
-//   --out DIR   carpeta de salida (default: ./output)
-//   --fresh     ignora el cache local y vuelve a bajar todo
-//   --limit N   procesa solo N productos (prueba rápida)
+// Uso:  node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N] [--html-only]
+//   --out DIR    carpeta de salida (default: ./output)
+//   --fresh      ignora el cache local y vuelve a bajar todo
+//   --limit N    procesa solo N productos (prueba rápida)
+//   --html-only  no genera PDF (más rápido; el HTML tiene todos los datos)
 
 const fs = require("fs");
 const path = require("path");
-const { detectStore, getProductUrls, fetchText, parseProduct } = require("./lib/tiendanube");
+const { detectStore } = require("./lib/detect");
+const woocommerce = require("./lib/platforms/woocommerce");
+const generic = require("./lib/platforms/generic");
 const { buildCatalogHtml } = require("./lib/templates-catalog");
 const { renderPdf } = require("./lib/render");
 const { fmtInt, fmtDateTime, slug, stamp } = require("./lib/format");
 
-const CONCURRENCY = 3; // Tienda Nube tira HTTP 429 si lo apuramos
+const CONCURRENCY = 3; // las tiendas tiran HTTP 429 si las apuramos; scraping respetuoso
 
 function parseArgs(argv) {
-  const a = { url: null, out: null, fresh: false, limit: Infinity };
+  const a = { url: null, out: null, fresh: false, limit: Infinity, htmlOnly: false };
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i];
     if (v === "--fresh") a.fresh = true;
+    else if (v === "--html-only") a.htmlOnly = true;
     else if (v === "--out") a.out = argv[++i];
     else if (v === "--limit") a.limit = parseInt(argv[++i], 10);
     else if (!a.url) a.url = v;
   }
+  if (a.limit != null && !Number.isFinite(a.limit)) {
+    if (a.limit !== Infinity) {
+      console.error("--limit necesita un número (ej: --limit 20).");
+      process.exit(1);
+    }
+  }
   return a;
 }
 
-async function mapLimit(items, limit, worker) {
-  const results = new Array(items.length);
-  let i = 0;
-  async function run() {
-    while (i < items.length) {
-      const idx = i++;
-      results[idx] = await worker(items[idx], idx);
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
-  return results;
+// Cache en disco por host: los adapters guardan/leen páginas por clave.
+function makeCache(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  return {
+    get(key) {
+      const f = path.join(dir, key);
+      try {
+        return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null;
+      } catch {
+        return null;
+      }
+    },
+    put(key, text) {
+      try {
+        fs.writeFileSync(path.join(dir, key), text);
+      } catch {}
+    },
+    keys() {
+      try {
+        return fs.readdirSync(dir);
+      } catch {
+        return [];
+      }
+    },
+  };
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.url) {
-    console.error("Falta la URL. Uso: node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N]");
+    console.error(
+      "Falta la URL. Uso: node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N] [--html-only]"
+    );
     process.exit(1);
   }
   const OUT = path.resolve(args.out || path.join(process.cwd(), "output"));
   fs.mkdirSync(OUT, { recursive: true });
 
-  console.log("· Detectando tienda…");
-  const { base, brand } = await detectStore(args.url);
-  console.log(`  marca: ${brand}  ·  tienda: ${base}`);
+  console.log("· Detectando tienda y plataforma…");
+  const det = await detectStore(args.url);
+  let { platform } = det;
+  const { base, brand, homeHtml } = det;
+  console.log(`  marca: ${brand}  ·  tienda: ${base}  ·  plataforma: ${platform.label}`);
 
   const cacheDir = path.join(OUT, ".cache", new URL(base).hostname);
-  fs.mkdirSync(cacheDir, { recursive: true });
-  const cachedFiles = () =>
-    fs.readdirSync(cacheDir).filter((f) => f.endsWith(".html"));
+  const ctx = {
+    limit: args.limit,
+    fresh: args.fresh,
+    concurrency: CONCURRENCY,
+    cache: makeCache(cacheDir),
+    homeHtml,
+    log: (msg) => console.warn(msg.startsWith("·") || msg.startsWith("⚠") ? msg : msg),
+    progress: (msg) => process.stdout.write(`\r  ${msg}`.padEnd(58)),
+  };
 
-  console.log("· Leyendo sitemap…");
-  let urls = [];
-  let storeClosed = false;
+  let result;
   try {
-    urls = await getProductUrls(base);
+    result = await platform.getCatalog(base, ctx);
   } catch (e) {
-    if (e.code === "STORE_CLOSED") storeClosed = true;
-    else throw e;
+    // WooCommerce con Store API deshabilitada → probamos el flujo genérico.
+    if (e.code === "WC_STORE_API_UNAVAILABLE" || (platform === woocommerce && /Store API/.test(e.message))) {
+      console.warn(`⚠ ${e.message}`);
+      platform = generic;
+      result = await generic.getCatalog(base, ctx);
+    } else throw e;
   }
-
-  // Si la tienda está cerrada pero tenemos fichas en cache, regeneramos desde ahí.
-  if (!urls.length && !args.fresh && cachedFiles().length) {
-    urls = cachedFiles().map((f) => base + "/productos/" + f.replace(/\.html$/, "") + "/");
-    console.warn(`⚠ ${storeClosed ? "Tienda cerrada" : "Sitemap vacío"}: regenerando desde ${urls.length} fichas en cache.`);
-  }
-  if (!urls.length) {
-    throw new Error(
-      storeClosed
-        ? "La tienda está cerrada temporalmente (Tienda Nube /password) y no hay cache previo. Probá cuando reabra."
-        : "No encontré productos en el sitemap de esta tienda."
-    );
-  }
-  if (args.limit !== Infinity) urls = urls.slice(0, args.limit);
-  console.log(`· ${urls.length} productos a scrapear (concurrencia ${CONCURRENCY})`);
-
-  let done = 0;
-  const products = (
-    await mapLimit(urls, CONCURRENCY, async (url) => {
-      try {
-        const key = url.replace(/.*\/productos\//, "").replace(/[^a-z0-9]+/gi, "_") + ".html";
-        const file = path.join(cacheDir, key);
-        let html;
-        if (!args.fresh && fs.existsSync(file)) html = fs.readFileSync(file, "utf8");
-        else {
-          html = (await fetchText(url)).text;
-          fs.writeFileSync(file, html);
-        }
-        const p = parseProduct(html, url, base);
-        process.stdout.write(`\r  ${++done}/${urls.length}  ${p.name.slice(0, 38)}`.padEnd(58));
-        return p;
-      } catch (err) {
-        console.warn(`\n  ! ${url.split("/productos/")[1] || url}: ${err.message}`);
-        return null;
-      }
-    })
-  ).filter(Boolean);
+  const { products, currency } = result;
   console.log(`\n· ${products.length} productos parseados OK`);
+
+  // La home a veces da un og:site_name de marketing ("Marca Comfortable Shoes…").
+  // Si la mayoría del catálogo declara la misma marca/vendor y es más corta, gana.
+  let brandFinal = brand;
+  const vendorCount = new Map();
+  for (const p of products) {
+    if (p.brand) vendorCount.set(p.brand, (vendorCount.get(p.brand) || 0) + 1);
+  }
+  const [topVendor, topCount] = [...vendorCount.entries()].sort((a, b) => b[1] - a[1])[0] || [];
+  // exigimos mayoría Y muestra mínima: en retailers multimarca el vendor top no es la tienda
+  if (
+    topVendor &&
+    topCount >= Math.max(5, products.length / 2) &&
+    topVendor.length < brand.length
+  ) {
+    brandFinal = topVendor;
+  }
   if (!products.length) throw new Error("No pude parsear ningún producto.");
 
   // Orden: en stock primero, luego sin stock; dentro de cada grupo, lexicográfico (ASCII).
@@ -115,27 +134,46 @@ async function main() {
   });
 
   const scrapedAt = new Date();
+  const withStock = products.filter((p) => p.stockTotal != null);
+  const prices = products.map((p) => p.minPrice ?? p.price).filter((n) => n != null);
+  const maxes = products.map((p) => p.maxPrice ?? p.price).filter((n) => n != null);
   const summary = {
-    stockTotal: products.reduce((s, p) => s + (p.stockTotal || 0), 0),
-    minPrice: Math.min(...products.map((p) => p.minPrice ?? p.price ?? Infinity)),
-    maxPrice: Math.max(...products.map((p) => p.maxPrice ?? p.price ?? 0)),
+    stockTotal: withStock.length ? withStock.reduce((s, p) => s + p.stockTotal, 0) : null,
+    stockKnown: withStock.length,
+    minPrice: prices.length ? Math.min(...prices) : null,
+    maxPrice: maxes.length ? Math.max(...maxes) : null,
   };
 
-  const html = buildCatalogHtml({ brand, source: base, scrapedAt, summary, products });
+  const html = buildCatalogHtml({
+    brand: brandFinal,
+    source: base,
+    platform: platform.id,
+    platformLabel: platform.label,
+    currency: currency || null,
+    scrapedAt,
+    summary,
+    products,
+  });
 
-  const baseName = `Scrap_${slug(brand)}_${stamp(scrapedAt)}`;
+  const baseName = `Scrap_${slug(brandFinal)}_${stamp(scrapedAt)}`;
   const htmlPath = path.join(OUT, baseName + ".html");
   const pdfPath = path.join(OUT, baseName + ".pdf");
   fs.writeFileSync(htmlPath, html);
 
-  console.log("· Generando PDF…");
-  await renderPdf(html, pdfPath, { footerLeft: `Scrap ${brand} · ${new URL(base).hostname} · ${fmtDateTime(scrapedAt)}` });
+  if (!args.htmlOnly) {
+    console.log("· Generando PDF…");
+    await renderPdf(html, pdfPath, {
+      footerLeft: `Scrap ${brandFinal} · ${new URL(base).hostname} · ${fmtDateTime(scrapedAt)}`,
+    });
+  }
 
   console.log("\n✓ Listo");
-  console.log("  PDF:  " + pdfPath);
+  if (!args.htmlOnly) console.log("  PDF:  " + pdfPath);
   console.log("  HTML: " + htmlPath);
   console.log(
-    `  ${products.length} productos · stock ${fmtInt(summary.stockTotal)} u. · ${fmtDateTime(scrapedAt)}`
+    `  ${products.length} productos · ${
+      summary.stockTotal != null ? `stock ${fmtInt(summary.stockTotal)} u. · ` : "stock no público · "
+    }${platform.label} · ${fmtDateTime(scrapedAt)}`
   );
 }
 

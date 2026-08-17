@@ -1,4 +1,15 @@
+# dependencias y salidas
 node_modules/
 output/
 .cache/
 *.log
+
+# secretos: nunca commitear credenciales (esta skill no necesita ninguna)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# memoria local del proyecto (no se publica)
+NOTES.md

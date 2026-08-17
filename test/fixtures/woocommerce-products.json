@@ -1,0 +1,250 @@
+[
+ {
+  "id": 1475,
+  "name": "Replacement Set Screw and Allen Wrench Kit",
+  "slug": "replacement-set-screw-and-allen-wrench-kit",
+  "parent": 0,
+  "type": "variable",
+  "variation": "",
+  "permalink": "https://barefootbuttons.com/product/replacement-set-screw-and-allen-wrench-kit/",
+  "sku": "18-AC-AS-02",
+  "short_description": "",
+  "description": "<p class=\"isSelectedEnd\">Every Barefoot Button includes the hardware needed for installation, but sometimes extra parts come in handy.</p>\n<p class=\"isSelectedEnd\">Whether you&#8217;re setting up additional buttons, replacing lost hardware, or keeping spare parts in your gig bag, this Replacement Set Screw &amp; Allen Wrench Kit makes it easy to keep your Barefoot Buttons ready to go.</p>\n<p class=\"isSelectedEnd\">Each kit includes replacement set screws and an Allen wrench for installation and adjustment. Simply select the set screw size that matches your Barefoot Buttons using the dropdown menu.</p>\n<h2 data-section-id=\"1d7mrtu\" data-start=\"597\" data-end=\"608\">Features</h2>\n<p class=\"isSelectedEnd\">• Genuine Barefoot Buttons replacement hardware<br />\n• Great to keep as backup hardware for pedalboard maintenance<br />\n• Includes Allen wrench for installation and adjustment<br />\n• Available in multiple set screw sizes to match your Barefoot Buttons<br />\n• Compact and easy to store in a gig bag, toolbox, or pedalboard case</p>\n<h2 data-section-id=\"14bu82z\" data-start=\"869\" data-end=\"885\">Compatibility</h2>\n<p class=\"isSelectedEnd\">Available for all Barefoot Button Fits.</p>\n<p class=\"isSelectedEnd\">Please select the correct size for your Barefoot Buttons before ordering.</p>\n<h2 data-section-id=\"1vgjuc7\" data-start=\"993\" data-end=\"1024\">Why Players Keep Extras</h2>\n<p class=\"isSelectedEnd\">Set screws are small, and occasionally one goes missing during a pedalboard rebuild, switch replacement, or routine adjustments. Keeping a spare set on hand helps ensure you&#8217;re always ready to move, swap, or install your Barefoot Buttons without interruption.</p>\n<h2 data-section-id=\"14bu82z\" data-start=\"869\" data-end=\"885\">Included</h2>\n<p>• Allen wrench<br />\n• Replacement set screws (6)</p>\n<p>&nbsp;</p>",
+  "on_sale": false,
+  "prices": {
+   "price": "195",
+   "regular_price": "195",
+   "sale_price": "195",
+   "price_range": null,
+   "currency_code": "USD",
+   "currency_symbol": "$",
+   "currency_minor_unit": 2,
+   "currency_decimal_separator": ".",
+   "currency_thousand_separator": ",",
+   "currency_prefix": "$",
+   "currency_suffix": ""
+  },
+  "price_html": "<span class=\"woocommerce-Price-amount amount\"><span class=\"woocommerce-Price-currencySymbol\">&#036;</span>1.95</span>",
+  "average_rating": "0",
+  "review_count": 0,
+  "images": [
+   {
+    "id": 1476,
+    "src": "https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut.png",
+    "thumbnail": "https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut-247x296.png",
+    "srcset": "https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut.png 1080w, https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut-400x400.png 400w, https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut-800x800.png 800w, https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut-280x280.png 280w, https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut-768x768.png 768w, https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut-510x510.png 510w, https://barefootbuttons.com/wp-content/uploads/2026/06/set-screws-allen-wrench-prodcut-100x100.png 100w",
+    "sizes": "(max-width: 1080px) 100vw, 1080px",
+    "thumbnail_srcset": "",
+    "thumbnail_sizes": "(max-width: 247px) 100vw, 247px",
+    "name": "Barefoot Buttons Replacement Set Screw and Allen Wrench Kit",
+    "alt": "Barefoot Buttons replacement hardware kit including a nAllen wrench and 6 set screws of size slected packaged in a clear resealable bag on a white background."
+   }
+  ],
+  "categories": [
+   {
+    "id": 85,
+    "name": "Accessories",
+    "slug": "accessories",
+    "link": "https://barefootbuttons.com/product-category/accessories/"
+   }
+  ],
+  "tags": [],
+  "brands": [],
+  "attributes": [
+   {
+    "id": 0,
+    "name": "Set Screw Size",
+    "taxonomy": null,
+    "has_variations": true,
+    "terms": [
+     {
+      "id": 0,
+      "name": "For V1/V2 Mini and V1/V2 Tallboy Mini",
+      "slug": "For V1/V2 Mini and V1/V2 Tallboy Mini"
+     },
+     {
+      "id": 0,
+      "name": "For V1/V2 Standard, V1/V2 Standard Skirtless & V1/V2 Tallboy",
+      "slug": "For V1/V2 Standard, V1/V2 Standard Skirtless & V1/V2 Tallboy"
+     },
+     {
+      "id": 0,
+      "name": "For Big Bore Standard, Big Bore Standard Skirtless, Big Bore Tallboy & Max Bore",
+      "slug": "For Big Bore Standard, Big Bore Standard Skirtless, Big Bore Tallboy & Max Bore"
+     }
+    ]
+   }
+  ],
+  "variations": [
+   {
+    "id": 1485,
+    "attributes": [
+     {
+      "name": "Set Screw Size",
+      "value": null
+     }
+    ]
+   }
+  ],
+  "grouped_products": [],
+  "has_options": true,
+  "is_purchasable": true,
+  "is_in_stock": true,
+  "is_on_backorder": false,
+  "low_stock_remaining": null,
+  "stock_availability": {
+   "text": "99 in stock",
+   "class": "in-stock"
+  },
+  "sold_individually": false,
+  "weight": "",
+  "dimensions": {
+   "length": "",
+   "width": "",
+   "height": ""
+  },
+  "formatted_weight": "N/A",
+  "formatted_dimensions": "N/A",
+  "add_to_cart": {
+   "text": "Select options",
+   "description": "Select options for &ldquo;Replacement Set Screw and Allen Wrench Kit&rdquo;",
+   "url": "https://barefootbuttons.com/product/replacement-set-screw-and-allen-wrench-kit/",
+   "single_text": "Add to cart",
+   "minimum": 1,
+   "maximum": 99,
+   "multiple_of": 1
+  },
+  "is_password_protected": false,
+  "extensions": {},
+  "_links": {
+   "self": [
+    {
+     "href": "https://barefootbuttons.com/wp-json/wc/store/v1/products/1475",
+     "targetHints": {
+      "allow": [
+       "GET"
+      ]
+     }
+    }
+   ],
+   "collection": [
+    {
+     "href": "https://barefootbuttons.com/wp-json/wc/store/v1/products"
+    }
+   ],
+   "related": [
+    {
+     "embeddable": true,
+     "href": "https://barefootbuttons.com/wp-json/wc/store/v1/products?related=1475&per_page=10"
+    }
+   ]
+  }
+ },
+ {
+  "id": 1298,
+  "name": "Spacers- Pack of 4",
+  "slug": "spacers-pack-of-4",
+  "parent": 0,
+  "type": "simple",
+  "variation": "",
+  "permalink": "https://barefootbuttons.com/product/spacers-pack-of-4/",
+  "sku": "18-AC-NS-01",
+  "short_description": "",
+  "description": "<p data-start=\"16\" data-end=\"76\">Sometimes a pedal setup needs just a little extra clearance.</p>\n<p data-start=\"78\" data-end=\"450\">Barefoot Buttons Spacers are designed to raise the button slightly when a switch head is too short for the set screws to fully secure against, or when additional height clearance is needed around LED rings or recessed switch areas. Installed inside the bore of the button, the spacer lifts the button approximately 1/16&#8243; to help create a more secure and reliable fit.</p>\n<p data-start=\"452\" data-end=\"595\">Simple, effective, and easy to install, Spacer Rings can help solve compatibility and clearance issues without changing the feel of your setup.</p>\n<h2 data-section-id=\"1d7mrtu\" data-start=\"597\" data-end=\"608\">Features</h2>\n<ul data-start=\"610\" data-end=\"867\">\n<li data-section-id=\"1q6pmio\" data-start=\"610\" data-end=\"652\">Raises button height approximately 1/16&#8243;</li>\n<li data-section-id=\"1vlk6me\" data-start=\"653\" data-end=\"696\">Helps improve fit on shorter switch heads</li>\n<li data-section-id=\"1oft9kn\" data-start=\"697\" data-end=\"757\">Useful for pedals with LED rings or tight switch clearance</li>\n<li data-section-id=\"1e6jpvn\" data-start=\"758\" data-end=\"798\">Installs inside the bore of the button</li>\n<li data-section-id=\"1pxehia\" data-start=\"799\" data-end=\"828\">Lightweight and low profile</li>\n<li data-section-id=\"id91tq\" data-start=\"829\" data-end=\"867\">Compatible with V1 and Big Bore fits</li>\n</ul>\n<h2 data-section-id=\"14bu82z\" data-start=\"869\" data-end=\"885\">Compatibility</h2>\n<p data-start=\"887\" data-end=\"903\">Compatible with:</p>\n<ul data-start=\"904\" data-end=\"953\">\n<li data-section-id=\"1j6dg7g\" data-start=\"904\" data-end=\"925\">V1 Barefoot Buttons</li>\n<li data-section-id=\"swr7nh\" data-start=\"926\" data-end=\"953\">Big Bore Barefoot Buttons</li>\n</ul>\n<p data-start=\"955\" data-end=\"975\">Not compatible with:</p>\n<ul data-start=\"976\" data-end=\"991\">\n<li data-section-id=\"yhmu8c\" data-start=\"976\" data-end=\"980\">V2</li>\n<li data-section-id=\"11gv406\" data-start=\"981\" data-end=\"991\">Max Bore</li>\n</ul>\n<h2 data-section-id=\"1vgjuc7\" data-start=\"993\" data-end=\"1024\">Why Players Use Spacers</h2>\n<p data-start=\"1026\" data-end=\"1313\">Not every pedal switch is built exactly the same. Some switches sit lower, have shorter heads, or include LED housings that reduce clearance around the button. Spacers provide a simple way to fine tune fitment while keeping the clean look and control Barefoot Buttons are known for.</p>\n<h2 data-section-id=\"1p3u389\" data-start=\"1315\" data-end=\"1330\">Installation</h2>\n<p data-start=\"1332\" data-end=\"1533\">Place the Spacers inside the bore of the Barefoot Button before installing onto the switch. Once installed, the spacer slightly raises the button to improve set screw contact and overall clearance.</p>\n<h2 data-section-id=\"ntyisd\" data-start=\"1535\" data-end=\"1546\">Included</h2>\n<ul data-start=\"1548\" data-end=\"1603\" data-is-last-node=\"\" data-is-only-node=\"\">\n<li data-section-id=\"1efusme\" data-start=\"1548\" data-end=\"1603\" data-is-last-node=\"\">4 spacers</li>\n</ul>",
+  "on_sale": false,
+  "prices": {
+   "price": "195",
+   "regular_price": "195",
+   "sale_price": "195",
+   "price_range": null,
+   "currency_code": "USD",
+   "currency_symbol": "$",
+   "currency_minor_unit": 2,
+   "currency_decimal_separator": ".",
+   "currency_thousand_separator": ",",
+   "currency_prefix": "$",
+   "currency_suffix": ""
+  },
+  "price_html": "<span class=\"woocommerce-Price-amount amount\"><span class=\"woocommerce-Price-currencySymbol\">&#036;</span>1.95</span>",
+  "average_rating": "0",
+  "review_count": 0,
+  "images": [
+   {
+    "id": 554,
+    "src": "https://barefootbuttons.com/wp-content/uploads/2026/04/spcaer-2.png",
+    "thumbnail": "https://barefootbuttons.com/wp-content/uploads/2026/04/spcaer-2-247x296.png",
+    "srcset": "https://barefootbuttons.com/wp-content/uploads/2026/04/spcaer-2.png 700w, https://barefootbuttons.com/wp-content/uploads/2026/04/spcaer-2-100x100.png 100w, https://barefootbuttons.com/wp-content/uploads/2026/04/spcaer-2-510x510.png 510w, https://barefootbuttons.com/wp-content/uploads/2026/04/spcaer-2-400x400.png 400w, https://barefootbuttons.com/wp-content/uploads/2026/04/spcaer-2-280x280.png 280w",
+    "sizes": "(max-width: 700px) 100vw, 700px",
+    "thumbnail_srcset": "",
+    "thumbnail_sizes": "(max-width: 247px) 100vw, 247px",
+    "name": "Barefoot Buttons Spacer Insert",
+    "alt": "Barefoot Buttons spacer insert used to adjust fit inside the button bore"
+   }
+  ],
+  "categories": [
+   {
+    "id": 85,
+    "name": "Accessories",
+    "slug": "accessories",
+    "link": "https://barefootbuttons.com/product-category/accessories/"
+   }
+  ],
+  "tags": [],
+  "brands": [],
+  "attributes": [],
+  "variations": [],
+  "grouped_products": [],
+  "has_options": false,
+  "is_purchasable": true,
+  "is_in_stock": true,
+  "is_on_backorder": false,
+  "low_stock_remaining": null,
+  "stock_availability": {
+   "text": "",
+   "class": "in-stock"
+  },
+  "sold_individually": false,
+  "weight": "",
+  "dimensions": {
+   "length": "",
+   "width": "",
+   "height": ""
+  },
+  "formatted_weight": "N/A",
+  "formatted_dimensions": "N/A",
+  "add_to_cart": {
+   "text": "Add to cart",
+   "description": "Add to cart: &ldquo;Spacers- Pack of 4&rdquo;",
+   "url": "/wp-json/wc/store/v1/products?per_page=2&#038;add-to-cart=1298",
+   "single_text": "Add to cart",
+   "minimum": 1,
+   "maximum": 9999,
+   "multiple_of": 1
+  },
+  "is_password_protected": false,
+  "extensions": {},
+  "_links": {
+   "self": [
+    {
+     "href": "https://barefootbuttons.com/wp-json/wc/store/v1/products/1298",
+     "targetHints": {
+      "allow": [
+       "GET"
+      ]
+     }
+    }
+   ],
+   "collection": [
+    {
+     "href": "https://barefootbuttons.com/wp-json/wc/store/v1/products"
+    }
+   ],
+   "related": [
+    {
+     "embeddable": true,
+     "href": "https://barefootbuttons.com/wp-json/wc/store/v1/products?related=1298&per_page=10"
+    }
+   ]
+  }
+ }
+]

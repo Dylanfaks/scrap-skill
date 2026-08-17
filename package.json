@@ -1,13 +1,30 @@
 {
   "name": "scrap-skill",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Skill /scrap — scrapea catálogos de marcas de ropa (Tienda Nube) a un reporte PDF+HTML, y compara scraps en el tiempo para estimar ventas.",
+  "description": "Claude Code skill: scrape any online store's public catalog (Tienda Nube, Shopify, WooCommerce or generic structured data) into a PDF+HTML report, and compare snapshots over time to estimate sales. / Skill de Claude Code: scrapea el catálogo público de cualquier tienda online y estima ventas comparando scraps.",
   "type": "commonjs",
   "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "claude-skill",
+    "scraper",
+    "ecommerce",
+    "tienda-nube",
+    "nuvemshop",
+    "shopify",
+    "woocommerce",
+    "catalog",
+    "sales-estimation",
+    "competitive-analysis"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "scrape": "node scripts/scrape.js",
-    "compare": "node scripts/compare.js"
+    "compare": "node scripts/compare.js",
+    "test": "node --test"
   },
   "dependencies": {
     "puppeteer-core": "^24.0.0"

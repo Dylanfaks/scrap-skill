@@ -32,10 +32,16 @@ function sizeMiniTable(p) {
   )}</th><th>Stock</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+// Con stock numérico mostramos unidades; sin él (Shopify/Woo/genérico) solo
+// disponibilidad, que es lo único que la plataforma hace público.
+function stockBadge(p, cls) {
+  if (!p.available) return `<div class="${cls} out">${p.stockTotal == null ? "AGOTADO" : "SIN STOCK"}</div>`;
+  if (p.stockTotal == null) return `<div class="${cls}">Disponible</div>`;
+  return `<div class="${cls}">Stock: ${p.stockTotal} u.</div>`;
+}
+
 function gridCard(p) {
-  const badge = p.available
-    ? `<div class="stock">Stock: ${p.stockTotal} u.</div>`
-    : `<div class="stock out">SIN STOCK</div>`;
+  const badge = stockBadge(p, "stock");
   return `<div class="card">
     <div class="thumb">${p.mainImage ? `<img src="${esc(p.mainImage)}">` : ""}</div>
     <div class="name">${esc(p.name)}</div>
@@ -67,9 +73,7 @@ function variantRows(p) {
 }
 
 function detailBlock(p) {
-  const badge = p.available
-    ? `<div class="d-stock">Stock: ${p.stockTotal} u.</div>`
-    : `<div class="d-stock out">SIN STOCK</div>`;
+  const badge = stockBadge(p, "d-stock");
   const soldRow = p.soldQty != null ? `<tr><td class="k">Vendidas</td><td>${p.soldQty} u.</td></tr>` : "";
   return `<section class="detail">
     <div class="d-head">
@@ -83,7 +87,13 @@ function detailBlock(p) {
           <tr><td class="k">Marca</td><td>${esc(p.brand || "—")}</td></tr>
           <tr><td class="k">URL</td><td>${esc(p.url)}</td></tr>
           <tr><td class="k">Categoría</td><td>${esc(categoryLine(p, true))}</td></tr>
-          <tr><td class="k">Variantes</td><td>${p.variants.length} (stock total: ${p.stockTotal} u.)</td></tr>
+          ${
+            p.variants.length
+              ? `<tr><td class="k">Variantes</td><td>${p.variants.length}${
+                  p.stockTotal != null ? ` (stock total: ${p.stockTotal} u.)` : ""
+                }</td></tr>`
+              : ""
+          }
           ${soldRow}
           <tr><td class="k">SEO title</td><td>${esc(p.seoTitle || "—")}</td></tr>
           <tr><td class="k">Meta description</td><td>${esc(truncate(p.metaDescription, 90))}</td></tr>
@@ -92,13 +102,17 @@ function detailBlock(p) {
     </div>
     <div class="d-sec">Descripción</div>
     <p class="d-desc">${esc(p.description || "—")}</p>
-    <div class="d-sec">Variantes y stock</div>
+    ${
+      p.variants.length
+        ? `<div class="d-sec">Variantes y stock</div>
     <table class="vtable">
       <thead><tr><th>${esc(
         p.sizeOptionName
       )}</th><th>SKU</th><th>Stock</th><th>Disp.</th><th>Precio</th><th>Promo</th><th>Compare-at</th></tr></thead>
       <tbody>${variantRows(p)}</tbody>
-    </table>
+    </table>`
+        : ""
+    }
     ${
       p.payDiscount
         ? `<div class="paynote"><b>Precio con descuento por pago:</b> ${esc(
@@ -113,10 +127,11 @@ function detailBlock(p) {
 function buildDataset(meta) {
   return {
     skill: "scrap",
-    version: "1.0.0",
-    platform: "tiendanube",
+    version: "2.0.0",
+    platform: meta.platform || "tiendanube",
     brand: meta.brand,
     source: meta.source,
+    currency: meta.currency || null,
     scrapedAt: meta.scrapedAt.toISOString(),
     summary: meta.summary,
     products: meta.products.map((p) => ({
@@ -197,29 +212,39 @@ function buildCatalogHtml(meta) {
 </style></head><body>
   <div class="cover">
     <h1>Scrap ${esc(meta.brand)}</h1>
-    <div class="c1">Catálogo scrapeado desde ${esc(new URL(meta.source).hostname)}</div>
-    <div class="c2">${products.length} productos · stock total ${fmtInt(
-    meta.summary.stockTotal
-  )} u. · rango ${fmtPrice(meta.summary.minPrice)}–${fmtPrice(meta.summary.maxPrice)}</div>
+    <div class="c1">Catálogo scrapeado desde ${esc(new URL(meta.source).hostname)} · ${esc(
+    meta.platformLabel || "Tienda Nube"
+  )}</div>
+    <div class="c2">${products.length} productos${
+    meta.summary.stockTotal != null ? ` · stock total ${fmtInt(meta.summary.stockTotal)} u.` : ""
+  } · rango ${fmtPrice(meta.summary.minPrice)}–${fmtPrice(meta.summary.maxPrice)}${
+    meta.currency && meta.currency !== "ARS" ? " " + esc(meta.currency) : ""
+  }</div>
   </div>
   <div class="wrap">
     <h2>Resumen</h2>
     <table class="summary">
       <tr><td class="k">Productos scrapeados</td><td>${products.length}</td></tr>
-      <tr><td class="k">Stock total (unidades)</td><td>${fmtInt(meta.summary.stockTotal)}</td></tr>
-      <tr><td class="k">Productos en stock</td><td>${inStock}</td></tr>
-      <tr><td class="k">Productos sin stock</td><td>${products.length - inStock}</td></tr>
+      ${
+        meta.summary.stockTotal != null
+          ? `<tr><td class="k">Stock total (unidades)</td><td>${fmtInt(meta.summary.stockTotal)}</td></tr>`
+          : `<tr><td class="k">Stock numérico</td><td>no público en esta plataforma (solo disponibilidad)</td></tr>`
+      }
+      <tr><td class="k">Productos disponibles</td><td>${inStock}</td></tr>
+      <tr><td class="k">Productos agotados</td><td>${products.length - inStock}</td></tr>
       <tr><td class="k">Rango de precios</td><td>${fmtPrice(meta.summary.minPrice)} – ${fmtPrice(
     meta.summary.maxPrice
-  )}</td></tr>
-      <tr><td class="k">Fuente</td><td>${esc(new URL(meta.source).hostname)} (Tienda Nube)</td></tr>
+  )}${meta.currency ? " " + esc(meta.currency) : ""}</td></tr>
+      <tr><td class="k">Fuente</td><td>${esc(new URL(meta.source).hostname)} (${esc(
+    meta.platformLabel || "Tienda Nube"
+  )})</td></tr>
       <tr><td class="k">Fecha y hora del scrap</td><td>${fmtDateTime(meta.scrapedAt)}</td></tr>
     </table>
-    <p class="fields"><b>Campos extraídos por producto:</b> ID, nombre, marca, URL,
-    breadcrumb (categoría), título SEO, meta description, descripción, imagen principal,
-    precio (mínimo y máximo), precio con descuento por pago, precio promocional,
-    compare-at price, unidades vendidas, y por cada variante: talle/opciones, SKU, stock,
-    disponibilidad, ID interno e imagen.</p>
+    <p class="fields"><b>Campos extraídos por producto</b> (según lo que la plataforma hace
+    público): ID, nombre, marca, URL, breadcrumb (categoría), título SEO, meta description,
+    descripción, imagen principal, precio (mínimo y máximo), precio promocional, compare-at
+    price, descuento por pago, unidades vendidas, disponibilidad, y por cada variante:
+    talle/opciones, SKU, stock e imagen.</p>
 
     <div class="section-break"></div>
     <h2>Grilla de productos</h2>

@@ -33,7 +33,9 @@ const dateShort = (d) => d.toLocaleDateString("es-AR", { day: "2-digit", month: 
 
 function buildSalesHtml(cmp) {
   const t = cmp.total;
-  const showTrend = cmp.periods.length >= 2;
+  const showTrend = cmp.periods.length >= 2 && !cmp.availabilityOnly;
+  const isTN = cmp.platform === "tiendanube" || cmp.platform == null;
+  const showUnits = !cmp.availabilityOnly;
 
   const trendRows = cmp.periods
     .map(
@@ -50,7 +52,7 @@ function buildSalesHtml(cmp) {
       (s) =>
         `<tr><td>${esc(s.name)}</td><td class="c">${s.vendidas}</td><td class="r">${fmtPrice(
           s.revenue
-        )}</td><td class="c muted">${s.fromStock} → ${s.toStock}</td></tr>`
+        )}</td><td class="c muted">${s.fromStock ?? "s/d"} → ${s.toStock ?? "s/d"}</td></tr>`
     )
     .join("");
 
@@ -126,25 +128,49 @@ function buildSalesHtml(cmp) {
     cmp.nScraps
   } scraps comparados</div>
     <div class="head">
-      <div><div class="h-big">${t.sold} u.</div><div class="h-lbl">Unidades vendidas</div></div>
+      ${
+        showUnits
+          ? `<div><div class="h-big">${t.sold} u.</div><div class="h-lbl">Unidades vendidas</div></div>
       <div><div class="h-big red">${fmtMoney(t.revenueList)}</div><div class="h-lbl">Facturación (lista)</div></div>
-      <div><div class="h-big">${fmtPrice(t.ticket)}</div><div class="h-lbl">Ticket promedio</div></div>
+      <div><div class="h-big">${fmtPrice(t.ticket)}</div><div class="h-lbl">Ticket promedio</div></div>`
+          : `<div><div class="h-big red">${cmp.agotados.length}</div><div class="h-lbl">Productos agotados</div></div>
+      <div><div class="h-big">${cmp.reaparecidos.length}</div><div class="h-lbl">Volvieron a stock</div></div>
+      <div><div class="h-big">${cmp.productsActivos}</div><div class="h-lbl">Productos activos</div></div>`
+      }
     </div>
   </div>
 
   <div class="wrap">
-    <div class="callout">⚠ <b>Estimación por comparación de stock público</b>, no es la caja real de la marca.
-    Se mide la caída de stock de cada producto entre cada par de scraps: lo que bajó, se vendió.
-    Es un <b>piso</b> — las ventas reales son algo mayores (no capta reposiciones ni productos reactivados).</div>
+    ${
+      showUnits
+        ? `<div class="callout">⚠ <b>Estimación sobre datos públicos de la tienda</b>, no es la caja real de la marca.
+    ${
+      cmp.usedSoldQty
+        ? "Combina el contador público de unidades vendidas (<code>sold_qty</code>) con la caída de stock entre scraps: se usa la mejor señal por producto."
+        : "Se mide la caída de stock de cada producto entre cada par de scraps: lo que bajó, se vendió."
+    }
+    Es un <b>piso</b> — las ventas reales pueden ser mayores (no capta reposiciones no observadas ni productos reactivados).</div>`
+        : `<div class="callout">⚠ <b>Esta plataforma no publica stock numérico</b> (solo disponibilidad por producto).
+    El reporte detecta <b>qué se agotó y qué volvió a stock</b> entre scraps, pero no puede contar unidades vendidas.
+    Para unidades y facturación estimadas se necesita una tienda que exponga stock (ej. Tienda Nube).</div>`
+    }
 
     <h2>Resumen ejecutivo</h2>
     <div class="metrics">
-      ${card("Unidades vendidas", t.sold + " u.", `${t.perDay.toFixed(1)} u/día`)}
-      ${card("Facturación — precio lista", fmtPrice(t.revenueList), `${fmtPrice(t.perDayRevenue)} /día`, RED)}
-      ${card("Facturación — transferencia", fmtPrice(t.revenueTransfer), "−10% pago efectivo/transf.", RED)}
-      ${card("Ticket promedio", fmtPrice(t.ticket), "por unidad")}
-      ${card("Proyección mensual", "~" + fmtMoney(t.monthly), "extrapolado del ritmo")}
-      ${card("Productos activos", String(cmp.productsActivos), `${cmp.productsBaja} dados de baja`)}
+      ${
+        showUnits
+          ? card("Unidades vendidas", t.sold + " u.", `${t.perDay.toFixed(1)} u/día`) +
+            card("Facturación — precio lista", fmtPrice(t.revenueList), `${fmtPrice(t.perDayRevenue)} /día`, RED) +
+            (isTN
+              ? card("Facturación — transferencia", fmtPrice(t.revenueTransfer), "−10% pago efectivo/transf.", RED)
+              : card("Proyección mensual", "~" + fmtMoney(t.monthly), "extrapolado del ritmo")) +
+            card("Ticket promedio", fmtPrice(t.ticket), "por unidad") +
+            (isTN ? card("Proyección mensual", "~" + fmtMoney(t.monthly), "extrapolado del ritmo") : "") +
+            card("Productos activos", String(cmp.productsActivos), `${cmp.productsBaja} dados de baja`)
+          : card("Se agotaron en el período", String(cmp.agotados.length), "disponible → agotado", RED) +
+            card("Volvieron a stock", String(cmp.reaparecidos.length), "agotado → disponible") +
+            card("Productos activos", String(cmp.productsActivos), `${cmp.productsBaja} dados de baja`)
+      }
     </div>
 
     ${
@@ -164,7 +190,9 @@ function buildSalesHtml(cmp) {
         : ""
     }
 
-    <h2>Más vendidos del período <span class="hint">— por unidades</span></h2>
+    ${
+      showUnits
+        ? `<h2>Más vendidos del período <span class="hint">— por unidades</span></h2>
     <div class="bars">${bars(
       t.topSold.slice(0, 10),
       (x) => x.vendidas,
@@ -184,7 +212,7 @@ function buildSalesHtml(cmp) {
 
     <div class="section-break"></div>
     <h2>Detalle de ventas del período</h2>
-    <p class="sub">Productos con caída de stock entre el primer y el último scrap.</p>
+    <p class="sub">Productos con ventas detectadas entre el primer y el último scrap.</p>
     <table class="data">
       <thead><tr><th>Producto</th><th class="c">Vendidas</th><th class="r">Facturación (lista)</th><th class="c">Stock inicio → fin</th></tr></thead>
       <tbody>${tableRows}</tbody>
@@ -194,40 +222,74 @@ function buildSalesHtml(cmp) {
     <div class="twocol avoid">
       <div class="box">
         <h3>Reposiciones detectadas</h3>
-        <p class="note" style="margin:0 0 6px">Entró stock nuevo → vendieron <i>y</i> repusieron, no se puede medir:</p>
+        <p class="note" style="margin:0 0 6px">Entró stock nuevo → vendieron <i>y</i> repusieron:</p>
         <ul>${reposRows}</ul>
       </div>
       <div class="box">
         <h3>Productos reactivados</h3>
-        <p class="note" style="margin:0 0 6px">Aparecieron después del primer scrap (su <code>sold_qty</code> es histórico, no del período):</p>
+        <p class="note" style="margin:0 0 6px">Aparecieron después del primer scrap (su histórico no es del período):</p>
         <ul>${reactRows}</ul>
       </div>
-    </div>
+    </div>`
+        : ""
+    }
 
-    <h2 class="avoid">Tamaño de la marca <span class="hint">— histórico acumulado, no del período</span></h2>
+    ${
+      cmp.agotados.length || cmp.reaparecidos.length
+        ? `<h2 class="avoid">Rotación de disponibilidad <span class="hint">— entre el primer y el último scrap</span></h2>
+    <div class="twocol avoid">
+      <div class="box">
+        <h3>Se agotaron (${cmp.agotados.length})</h3>
+        <ul>${cmp.agotados.map((x) => `<li>${esc(x.name)}</li>`).join("") || "<li>(ninguno)</li>"}</ul>
+      </div>
+      <div class="box">
+        <h3>Volvieron a stock (${cmp.reaparecidos.length})</h3>
+        <ul>${cmp.reaparecidos.map((x) => `<li>${esc(x.name)}</li>`).join("") || "<li>(ninguno)</li>"}</ul>
+      </div>
+    </div>`
+        : ""
+    }
+
+    ${
+      cmp.histU > 0
+        ? `<h2 class="avoid">Tamaño de la marca <span class="hint">— histórico acumulado, no del período</span></h2>
     <div class="twocol avoid">
       <div>
         <div class="metric" style="border-top-color:#0e7c66">
           <div class="m-label">Unidades vendidas en toda la vida de la tienda</div>
           <div class="m-big" style="color:#0e7c66">${cmp.histU.toLocaleString("es-AR")} u.</div>
-          <div class="m-sub">acumulado de los productos vivos (dato <code>sold_qty</code> de Tienda Nube)</div>
+          <div class="m-sub">acumulado de los productos vivos (contador <code>sold_qty</code> público de Tienda Nube)</div>
         </div>
       </div>
       <table class="data">
         <thead><tr><th>Best-sellers históricos</th><th class="r">Vendidas (total)</th></tr></thead>
         <tbody>${histRows}</tbody>
       </table>
-    </div>
+    </div>`
+        : ""
+    }
 
     <h2 class="avoid">Método y límites</h2>
     <p class="note avoid">
       <b>Cómo se calcula:</b> se cruzan los scraps por ID de producto y se ordenan por su fecha/hora de
-      generación. La caída de stock entre dos fechas se cuenta como ventas. <b>No es la caja real</b>: es
-      inferencia sobre el stock público que expone la tienda.<br>
-      <b>Por qué es un piso:</b> asume que no hubo reposición salvo las detectadas. Si la marca repuso stock
+      generación. ${
+        showUnits
+          ? cmp.usedSoldQty
+            ? "Por producto se usa la mejor señal pública disponible: el delta del contador de unidades vendidas (<code>sold_qty</code>, exacto y capta reposiciones) o la caída de stock entre fechas (piso)."
+            : "La caída de stock entre dos fechas se cuenta como ventas."
+          : "Sin stock numérico público, se registran las transiciones de disponibilidad (disponible → agotado y viceversa)."
+      } <b>No es la caja real</b>: es inferencia sobre los datos públicos que expone la tienda.<br>
+      ${
+        showUnits
+          ? `<b>Por qué es un piso:</b> asume que no hubo reposición salvo las detectadas. Si la marca repuso stock
       de otros productos, las ventas reales son mayores.<br>
-      <b>Valorización:</b> a precio de lista al inicio de cada período; con pago por transferencia/efectivo
-      (−10%) la facturación baja a ${fmtPrice(t.revenueTransfer)}.<br>
+      <b>Valorización:</b> a precio de lista al inicio de cada período${
+        isTN
+          ? `; con pago por transferencia/efectivo (−10%) la facturación baja a ${fmtPrice(t.revenueTransfer)}`
+          : ""
+      }.<br>`
+          : ""
+      }
       <b>Precisión:</b> cuantos más scraps y más seguidos, menos chance de reposiciones ocultas → estimación
       más exacta. Este reporte usa ${cmp.nScraps} scraps.<br>
       <b>Generado:</b> ${fmtDateTime(cmp.generatedAt)}.

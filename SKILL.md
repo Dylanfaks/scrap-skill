@@ -1,62 +1,91 @@
 ---
 name: scrap
-description: Use when the user runs /scrap with a clothing brand's online store URL to scrape its catalog into a report, or /scrap compare to estimate sales from two or more previously generated scrap reports of the same brand. Works on Tienda Nube stores.
+description: Use when the user runs /scrap with an online store URL to scrape its public catalog into a report (works on Tienda Nube, Shopify, WooCommerce and generic stores with structured data — platform is auto-detected), or /scrap compare to estimate sales from two or more previously generated scrap reports of the same store.
 ---
 
 # scrap
 
-Scrapea el catálogo público de una marca de ropa (Tienda Nube) a un reporte **PDF + HTML**, y compara scraps de distintas fechas para estimar **ventas, facturación y tendencia**.
+Scrapes the public catalog of any online store into a **PDF + HTML report**, and compares
+scraps from different dates to estimate **sales, revenue and trend**. The platform
+(Tienda Nube, Shopify, WooCommerce, or generic structured-data stores) is **detected
+automatically** — the user never has to say which one it is.
 
-`{SKILL_DIR}` = el directorio de esta skill (te lo pasan al invocarla, ej. `~/.claude/skills/scrap`).
-Corré los comandos **desde el directorio actual del usuario** (no desde el de la skill) para que la salida caiga en `./output` cerca suyo.
+`{SKILL_DIR}` = this skill's directory (passed when invoked, e.g. `~/.claude/skills/scrap`).
+Run the commands **from the user's current directory** (not the skill's) so output lands
+in `./output` near them. Reports are generated in Spanish (es-AR formatting).
 
-## Setup (una sola vez)
+## Setup (once)
 
-Si no existe `{SKILL_DIR}/node_modules/puppeteer-core`, instalá las dependencias:
+If `{SKILL_DIR}/node_modules/puppeteer-core` doesn't exist, install dependencies:
 ```bash
 npm install --prefix "{SKILL_DIR}" --no-audit --no-fund
 ```
-Requiere Node y Google Chrome/Chromium instalados (el script detecta el navegador solo en Mac/Windows/Linux; se puede forzar con `CHROME_PATH`).
+Requires Node ≥18 and Google Chrome/Chromium (auto-detected on Mac/Windows/Linux;
+override with `CHROME_PATH`). Chrome is only needed for the PDF — `--html-only` works without it.
 
-## Elegir el modo
+## Choosing the mode
 
-El primer argumento decide:
-- empieza con `http`/un dominio → **Modo catálogo** (scrapea esa tienda).
-- es `compare` → **Modo comparación** (usa los PDFs/HTML adjuntos).
+The first argument decides:
+- starts with `http`/a domain → **catalog mode** (scrape that store).
+- is `compare` → **comparison mode** (uses the attached reports).
 
-## Modo catálogo — `/scrap <url>`
+## Catalog mode — `/scrap <url>`
 
 ```bash
 node "{SKILL_DIR}/scripts/scrape.js" "<url>"
 ```
-Genera `./output/Scrap_<Marca>_<fecha_hora>.pdf` y `.html`. Pasá la salida real (rutas de los dos archivos + resumen de productos/stock) al usuario. Si el script avisa que la web no es Tienda Nube, decíselo (esta skill soporta Tienda Nube).
+Generates `./output/Scrap_<Brand>_<date_time>.pdf` + `.html`. Report the real output to
+the user: both absolute paths + product/stock summary + **which platform was detected**.
 
-## Modo comparación — `/scrap compare`
+Notes by platform (the script handles this alone; just relay it):
+- **Tienda Nube**: full data — numeric stock per variant and `sold_qty` (units sold).
+- **Shopify / WooCommerce / generic**: prices and availability, but **no numeric stock**
+  (those platforms don't make it public). Sales comparison will be availability-based.
+- If the store can't be detected or has no structured data, the script says so clearly.
 
-El usuario adjunta **2 o más** PDFs (o HTML) generados antes con `/scrap`, de **la misma marca**. Necesitás convertir cada uno en un dataset JSON y pasárselos a `compare.js`.
+Useful flags: `--limit N` (quick test), `--fresh` (ignore cache), `--html-only` (skip PDF),
+`--out DIR`.
 
-**1. Por cada archivo adjunto, armá su dataset** `{ "brand", "scrapedAt", "products":[...] }`:
-- **Si es un HTML de esta skill:** tiene `<script type="application/json" id="scrap-data">…</script>`. Ese JSON **es** el dataset — copialo tal cual.
-- **Si es un PDF de esta skill:** leé la portada (campo *"Fecha y hora del scrap"* → `scrapedAt`) y la sección *"Detalle por producto"*. Por cada producto armá `{ "id", "name", "price" (número, sin $ ni puntos), "stock" (total), "soldQty" (fila "Vendidas" si está) }`.
-- **Si es un PDF externo/viejo sin fecha:** preguntale al usuario la fecha (y hora si la sabe) de ese scrap.
+## Comparison mode — `/scrap compare`
 
-Guardá cada dataset en `./output/.compare/<n>.json` (numerados por orden de adjunto; el script igual los reordena por fecha).
+The user attaches **2+** reports (PDF or HTML) generated earlier with `/scrap`, from
+**the same store**. Convert each into a JSON dataset and pass them to `compare.js`.
 
-**2. Corré la comparación** con todos los datasets:
+**1. For each attached file, build its dataset** `{ "brand", "scrapedAt", "platform", "products":[...] }`:
+- **If it's an HTML from this skill:** it has `<script type="application/json" id="scrap-data">…</script>`.
+  That JSON **is** the dataset — copy it verbatim.
+- **If it's a PDF from this skill:** read the cover (*"Fecha y hora del scrap"* → `scrapedAt`)
+  and the *"Detalle por producto"* section. Per product build
+  `{ "id", "name", "price" (number), "stock" (total or null), "soldQty" ("Vendidas" row if present), "available" }`.
+- **If it's an old/external PDF without a date:** ask the user for that scrap's date (and time).
+
+Save each dataset to `./output/.compare/<n>.json`.
+
+**2. Run the comparison** with all datasets:
 ```bash
 node "{SKILL_DIR}/scripts/compare.js" ./output/.compare/*.json
 ```
-Genera `./output/Reporte_Ventas_<Marca>_<fecha_hora>.pdf` y `.html`. Pasale al usuario las rutas + el titular (unidades y facturación estimadas del período).
+Generates `./output/Reporte_Ventas_<Brand>_<date_time>.pdf` + `.html`. Give the user the
+paths + the headline (estimated units and revenue — or, for stores without numeric stock,
+which products sold out in the period).
 
-## Reglas
+## Rules
 
-- **Siempre entregá PDF y HTML**, y reportá las rutas absolutas.
-- La comparación es una **estimación por caída de stock** (no la caja real): es un piso. Aclarálo al entregar, como hace el propio reporte.
-- Más scraps y más seguidos = estimación más exacta. Sugerí scrapear cada pocos días para mejor seguimiento.
-- No inventes datos: si un PDF no tiene fecha, pedila; si no es Tienda Nube, avisá.
+- **Always deliver both PDF and HTML** and report absolute paths. The **HTML is the primary
+  deliverable** (lightweight, full data, machine-readable dataset embedded); highlight it.
+- **Light PDF by default:** `render.js` downsizes images to 320px for the PDF (the HTML keeps
+  full quality) so big catalogs don't produce 100+ MB PDFs. Don't raise `PDF_IMG_SIZE`
+  unless explicitly asked.
+- The comparison is an **estimate from public data** (not the store's real books): with
+  numeric stock it's a floor; without it, it only detects sold-out transitions. Say so when
+  delivering, as the report itself does.
+- More scraps, closer together = better estimates. Suggest scraping every few days.
+- Don't invent data: if a PDF has no date, ask; if a store exposes nothing, say so.
 
-## Detalle técnico
+## Technical detail
 
-- Scraper y parser: `scripts/lib/tiendanube.js`. Cálculo de ventas: `scripts/compare.js`.
-- Cache local de fichas en `./output/.cache/` para regenerar sin re-scrapear (`--fresh` para forzar).
-- `scrape.js` acepta `--limit N` (prueba), `--out DIR`, `--fresh`.
+- Platform detection: `scripts/lib/detect.js`. Adapters: `scripts/lib/platforms/*.js`
+  (one per platform, same normalized product shape). Sales math: `scripts/compare.js`.
+- Local page cache in `./output/.cache/<host>/` — re-runs are fast and a closed Tienda Nube
+  store (password page) can regenerate from cache. `--fresh` forces re-download.
+- Tests: `npm test` (fixtures with real store data live in `test/fixtures/`).
