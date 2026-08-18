@@ -2,11 +2,13 @@
 // compare.js — compara 2+ datasets de scrap de la misma marca (ordenados por su
 // fecha/hora) y estima ventas, generando un reporte PDF + HTML.
 //
-// Uso:  node scripts/compare.js <scrap1.json|.html> <scrap2.json|.html> [...] [--out DIR] [--html-only]
+// Uso:  node scripts/compare.js <scrap1.json|.html> <scrap2.json|.html> [...] [--out DIR] [--html-only] [--lang es|en]
 //
 // Acepta datasets JSON o directamente los HTML de catálogo que genera scrape.js
 // (extrae solo el dataset embebido <script id="scrap-data">).
 // Cada dataset tiene: { brand, scrapedAt (ISO), products:[{id,name,price,stock,soldQty?,available?}] }.
+// --lang: idioma del reporte de salida, es (default) | en — independiente del
+// idioma en que se scrapearon los datasets de entrada.
 //
 // Señales, de mejor a peor (se usa la mejor disponible por producto):
 //  1. delta de soldQty (Tienda Nube): ventas exactas del período, capta reposiciones.
@@ -19,6 +21,7 @@ const { buildSalesHtml } = require("./lib/templates-sales");
 const { renderPdf } = require("./lib/render");
 const { findChrome } = require("./lib/chrome");
 const { slug, stamp, fmtDateTime } = require("./lib/format");
+const { SUPPORTED: SUPPORTED_LANGS } = require("./lib/i18n");
 
 const DAY = 86400000;
 
@@ -26,12 +29,18 @@ function parseArgs(argv) {
   const files = [];
   let out = null;
   let htmlOnly = false;
+  let lang = "es";
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--out") out = argv[++i];
     else if (argv[i] === "--html-only") htmlOnly = true;
+    else if (argv[i] === "--lang") lang = argv[++i];
     else files.push(argv[i]);
   }
-  return { files, out, htmlOnly };
+  if (!SUPPORTED_LANGS.includes(lang)) {
+    console.error(`--lang inválido: "${lang}". Usá uno de: ${SUPPORTED_LANGS.join(", ")}.`);
+    process.exit(1);
+  }
+  return { files, out, htmlOnly, lang };
 }
 
 // Valida y carga un dataset. Acumula TODOS los problemas del archivo antes de
@@ -255,7 +264,7 @@ function compare(datasets) {
 }
 
 async function main() {
-  const { files, out, htmlOnly } = parseArgs(process.argv.slice(2));
+  const { files, out, htmlOnly, lang } = parseArgs(process.argv.slice(2));
   if (files.length < 2) {
     console.error(
       "Necesito al menos 2 datasets. Uso: node scripts/compare.js <d1.json> <d2.json> [...]"
@@ -282,6 +291,7 @@ async function main() {
   }
 
   const cmp = compare(datasets);
+  cmp.lang = lang;
   const html = buildSalesHtml(cmp);
 
   const baseName = `Reporte_Ventas_${slug(cmp.brand)}_${stamp(cmp.generatedAt)}`;

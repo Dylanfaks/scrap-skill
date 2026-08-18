@@ -4,12 +4,14 @@
 // Detecta la plataforma automáticamente: Tienda Nube, Shopify, WooCommerce o
 // genérica (datos estructurados JSON-LD / Open Graph).
 //
-// Uso:  node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N] [--html-only] [--json]
+// Uso:  node scripts/scrape.js <url> [--out DIR] [--fresh] [--limit N] [--html-only] [--json] [--lang es|en]
 //   --out DIR    carpeta de salida (default: ./output)
 //   --fresh      ignora el cache local y vuelve a bajar todo
 //   --limit N    procesa solo N productos (prueba rápida)
 //   --html-only  no genera PDF (más rápido; el HTML tiene todos los datos)
 //   --json       además exporta el dataset crudo a un .json (uso programático)
+//   --lang       idioma del reporte: es (default) | en. Solo afecta los labels de
+//                la interfaz — nombres, marcas y descripciones quedan como los scrapea la tienda.
 
 const fs = require("fs");
 const path = require("path");
@@ -20,11 +22,12 @@ const { buildCatalogHtml, buildDataset } = require("./lib/templates-catalog");
 const { renderPdf } = require("./lib/render");
 const { findChrome } = require("./lib/chrome");
 const { fmtInt, fmtDateTime, slug, stamp } = require("./lib/format");
+const { SUPPORTED: SUPPORTED_LANGS } = require("./lib/i18n");
 
 const CONCURRENCY = 3; // las tiendas tiran HTTP 429 si las apuramos; scraping respetuoso
 
 function parseArgs(argv) {
-  const a = { url: null, out: null, fresh: false, limit: Infinity, htmlOnly: false, json: false };
+  const a = { url: null, out: null, fresh: false, limit: Infinity, htmlOnly: false, json: false, lang: "es" };
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i];
     if (v === "--fresh") a.fresh = true;
@@ -32,6 +35,7 @@ function parseArgs(argv) {
     else if (v === "--json") a.json = true;
     else if (v === "--out") a.out = argv[++i];
     else if (v === "--limit") a.limit = parseInt(argv[++i], 10);
+    else if (v === "--lang") a.lang = argv[++i];
     else if (!a.url) a.url = v;
   }
   if (a.limit != null && !Number.isFinite(a.limit)) {
@@ -39,6 +43,10 @@ function parseArgs(argv) {
       console.error("--limit necesita un número (ej: --limit 20).");
       process.exit(1);
     }
+  }
+  if (!SUPPORTED_LANGS.includes(a.lang)) {
+    console.error(`--lang inválido: "${a.lang}". Usá uno de: ${SUPPORTED_LANGS.join(", ")}.`);
+    process.exit(1);
   }
   return a;
 }
@@ -156,6 +164,7 @@ async function main() {
     scrapedAt,
     summary,
     products,
+    lang: args.lang,
   };
   const html = buildCatalogHtml(meta);
 

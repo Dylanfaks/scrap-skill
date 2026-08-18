@@ -50,6 +50,7 @@ You can also use the scripts standalone, without Claude Code:
 ```bash
 node scripts/scrape.js https://somestore.com            # full catalog (PDF + HTML)
 node scripts/scrape.js somestore.com --limit 20 --json  # quick test + raw JSON dataset
+node scripts/scrape.js somestore.com --lang en          # report in English
 node scripts/compare.js output/Scrap_A.html output/Scrap_B.html   # sales estimate,
                                                         # straight from the HTML reports
 ```
@@ -57,6 +58,11 @@ node scripts/compare.js output/Scrap_A.html output/Scrap_B.html   # sales estima
 `compare.js` accepts the HTML reports directly (it reads the embedded dataset), JSON
 datasets, or a mix. No Chrome installed? Reports still come out as HTML — the PDF is
 skipped with a warning.
+
+**Report language:** every report (HTML and PDF) can be generated in Spanish (default) or
+English with `--lang es|en` on either script — `--lang` on `compare.js` is independent from
+the language the input scraps were generated in. Only the interface labels are translated;
+scraped content (product names, brands, descriptions) is kept exactly as the store exposes it.
 
 ## How does it detect the platform?
 

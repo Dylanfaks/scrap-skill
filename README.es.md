@@ -52,6 +52,7 @@ También podés usar los scripts sueltos, sin Claude Code:
 ```bash
 node scripts/scrape.js https://algunatienda.com          # catálogo completo (PDF + HTML)
 node scripts/scrape.js algunatienda.com --limit 20 --json  # prueba rápida + dataset JSON
+node scripts/scrape.js algunatienda.com --lang en         # reporte en inglés
 node scripts/compare.js output/Scrap_A.html output/Scrap_B.html   # estimación de ventas,
                                                          # directo desde los HTML
 ```
@@ -59,6 +60,12 @@ node scripts/compare.js output/Scrap_A.html output/Scrap_B.html   # estimación 
 `compare.js` acepta los reportes HTML directamente (lee el dataset embebido), datasets
 JSON, o una mezcla. ¿No tenés Chrome? Los reportes salen igual en HTML — el PDF se
 omite con un aviso.
+
+**Idioma del reporte:** cada reporte (HTML y PDF) se puede generar en español (default) o
+inglés con `--lang es|en` en cualquiera de los dos scripts — el `--lang` de `compare.js` es
+independiente del idioma con el que se generaron los scraps de entrada. Solo se traducen
+los labels de la interfaz; el contenido scrapeado (nombres de producto, marca,
+descripciones) queda tal cual lo expone la tienda.
 
 ## ¿Cómo detecta la plataforma?
 

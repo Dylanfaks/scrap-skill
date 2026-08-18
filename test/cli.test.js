@@ -23,6 +23,52 @@ test("scrape.js sin URL: sale con código 1 y uso claro", () => {
   assert.match(r.out, /Falta la URL/);
 });
 
+test("scrape.js con --lang inválido: sale con código 1 y lista los idiomas soportados", () => {
+  const r = run("scrape.js", ["https://ejemplo.com", "--lang", "fr"]);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.out, /--lang inválido.*es, en/);
+});
+
+test("compare.js con --lang inválido: sale con código 1", () => {
+  const r = run("compare.js", ["a.json", "b.json", "--lang", "pt"]);
+  assert.strictEqual(r.code, 1);
+  assert.match(r.out, /--lang inválido.*es, en/);
+});
+
+test("compare.js --lang en: el reporte de ventas sale en inglés end-to-end", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "scrap-cli-"));
+  const mk = (day, stock, soldQty) =>
+    JSON.stringify({
+      brand: "Marca CLI",
+      platform: "tiendanube",
+      currency: "ARS",
+      scrapedAt: `2026-08-${String(day).padStart(2, "0")}T12:00:00Z`,
+      products: [{ id: 7, name: "Producto CLI", price: 2000, stock, soldQty, available: stock > 0 }],
+    });
+  fs.writeFileSync(path.join(dir, "a.json"), mk(1, 10, 30));
+  fs.writeFileSync(path.join(dir, "b.json"), mk(8, 4, 36));
+
+  const r = run("compare.js", [
+    path.join(dir, "a.json"),
+    path.join(dir, "b.json"),
+    "--lang",
+    "en",
+    "--html-only",
+    "--out",
+    path.join(dir, "out"),
+  ]);
+  assert.strictEqual(r.code, 0);
+
+  const html = fs
+    .readdirSync(path.join(dir, "out"))
+    .filter((f) => f.endsWith(".html"))
+    .map((f) => fs.readFileSync(path.join(dir, "out", f), "utf8"))[0];
+  assert.ok(/<html lang="en">/.test(html));
+  assert.ok(/Units sold/.test(html));
+  assert.ok(!/Unidades vendidas/.test(html));
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test("scrape.js con --limit inválido: sale con código 1", () => {
   const r = run("scrape.js", ["https://ejemplo.com", "--limit", "abc"]);
   assert.strictEqual(r.code, 1);

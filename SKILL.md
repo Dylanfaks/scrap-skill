@@ -44,8 +44,10 @@ Notes by platform (the script handles this alone; just relay it):
 - If the store can't be detected or has no structured data, the script says so clearly.
 
 Useful flags: `--limit N` (quick test), `--fresh` (ignore cache), `--html-only` (skip PDF),
-`--json` (also export the raw dataset), `--out DIR`. Without Chrome installed the script
-still delivers the HTML (it warns and skips the PDF).
+`--json` (also export the raw dataset), `--lang es|en` (report language, default `es` —
+only translates interface labels, never product names/descriptions), `--out DIR`. Without
+Chrome installed the script still delivers the HTML (it warns and skips the PDF). If the
+user asks for the report in English (or their message is in English), pass `--lang en`.
 
 ## Comparison mode — `/scrap compare`
 
@@ -62,9 +64,10 @@ The user attaches **2+** reports (PDF or HTML) generated earlier with `/scrap`, 
   `./output/.compare/<n>.json`.
 - **If it's an old/external PDF without a date:** ask the user for that scrap's date (and time).
 
-**2. Run the comparison** — HTML files and JSON datasets can be mixed freely:
+**2. Run the comparison** — HTML files and JSON datasets can be mixed freely, and can come
+from scraps in either language (the report language is independent from the input):
 ```bash
-node "{SKILL_DIR}/scripts/compare.js" reporte1.html ./output/.compare/2.json [...]
+node "{SKILL_DIR}/scripts/compare.js" reporte1.html ./output/.compare/2.json [...] --lang en
 ```
 Generates `./output/Reporte_Ventas_<Brand>_<date_time>.pdf` + `.html`. Give the user the
 paths + the headline (estimated units and revenue — or, for stores without numeric stock,

@@ -1,23 +1,27 @@
 // Template HTML del reporte de catálogo (portada + resumen + grilla + detalle).
 // Mantiene el formato del reporte de referencia y embebe un dataset legible por
 // máquina (<script id="scrap-data">) para que /scrap compare sea exacto.
+// Soporta reportes en español o inglés vía meta.lang ("es" default | "en") —
+// solo traduce los labels de la interfaz, nunca el contenido scrapeado.
 
 const { fmtInt, fmtPrice, esc, truncate, fmtDateTime } = require("./format");
+const { t } = require("./i18n");
 
-function priceLabel(p) {
+function priceLabel(p, tr, lang) {
   if (p.minPrice != null && p.maxPrice != null && p.minPrice !== p.maxPrice) {
-    return `${fmtPrice(p.minPrice)} – ${fmtPrice(p.maxPrice)}`;
+    return `${fmtPrice(p.minPrice, lang)} – ${fmtPrice(p.maxPrice, lang)}`;
   }
-  return p.priceShort || fmtPrice(p.price);
+  return p.priceShort || fmtPrice(p.price, lang);
 }
 
-function categoryLine(p, withInicio) {
-  const parts = (p.crumbs && p.crumbs.length ? p.crumbs : ["Inicio"]).slice();
+function categoryLine(p, withHome, tr) {
+  const home = tr.htmlLang === "en" ? "Home" : "Inicio";
+  const parts = (p.crumbs && p.crumbs.length ? p.crumbs : [home]).slice();
   const full = parts.concat([p.name]);
-  return (withInicio ? full : full.filter((x) => x !== "Inicio")).join(" › ");
+  return (withHome ? full : full.filter((x) => x !== home)).join(" › ");
 }
 
-function sizeMiniTable(p) {
+function sizeMiniTable(p, tr) {
   if (!p.variants.length) return "";
   const rows = p.variants
     .map(
@@ -29,33 +33,33 @@ function sizeMiniTable(p) {
     .join("");
   return `<table class="mini"><thead><tr><th>${esc(
     p.sizeOptionName
-  )}</th><th>Stock</th></tr></thead><tbody>${rows}</tbody></table>`;
+  )}</th><th>${tr.stockLabel}</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 // Con stock numérico mostramos unidades; sin él (Shopify/Woo/genérico) solo
 // disponibilidad, que es lo único que la plataforma hace público.
-function stockBadge(p, cls) {
-  if (!p.available) return `<div class="${cls} out">${p.stockTotal == null ? "AGOTADO" : "SIN STOCK"}</div>`;
-  if (p.stockTotal == null) return `<div class="${cls}">Disponible</div>`;
-  return `<div class="${cls}">Stock: ${p.stockTotal} u.</div>`;
+function stockBadge(p, cls, tr) {
+  if (!p.available) return `<div class="${cls} out">${p.stockTotal == null ? tr.soldOut : tr.outOfStock}</div>`;
+  if (p.stockTotal == null) return `<div class="${cls}">${tr.available}</div>`;
+  return `<div class="${cls}">${tr.stockUnits(p.stockTotal)}</div>`;
 }
 
-function gridCard(p) {
-  const badge = stockBadge(p, "stock");
+function gridCard(p, tr, lang) {
+  const badge = stockBadge(p, "stock", tr);
   return `<div class="card">
     <div class="thumb">${p.mainImage ? `<img src="${esc(p.mainImage)}">` : ""}</div>
     <div class="name">${esc(p.name)}</div>
-    <div class="price">${esc(priceLabel(p))}</div>
+    <div class="price">${esc(priceLabel(p, tr, lang))}</div>
     ${badge}
-    ${sizeMiniTable(p)}
-    <div class="meta">${p.brand ? `<b>Marca:</b> ${esc(p.brand)}<br>` : ""}<b>Categoría:</b> ${esc(
-    categoryLine(p, false)
-  )}<br><b>ID:</b> ${esc(p.id)}</div>
+    ${sizeMiniTable(p, tr)}
+    <div class="meta">${p.brand ? `<b>${tr.brandField}:</b> ${esc(p.brand)}<br>` : ""}<b>${
+    tr.categoryField
+  }:</b> ${esc(categoryLine(p, false, tr))}<br><b>${tr.idField}:</b> ${esc(p.id)}</div>
     <div class="desc">${esc(truncate(p.description, 150))}</div>
   </div>`;
 }
 
-function variantRows(p) {
+function variantRows(p, tr, lang) {
   return p.variants
     .map((v) => {
       const out = !v.stock;
@@ -64,7 +68,7 @@ function variantRows(p) {
         <td>${v.sku ? esc(v.sku) : "—"}</td>
         <td class="num">${v.stock == null ? "—" : v.stock}</td>
         <td class="disp">${v.available ? '<span class="ok">✓</span>' : '<span class="no">✗</span>'}</td>
-        <td>${esc(v.priceShort || fmtPrice(p.price))}</td>
+        <td>${esc(v.priceShort || fmtPrice(p.price, lang))}</td>
         <td>${v.promoShort ? esc(v.promoShort) : "—"}</td>
         <td>${v.compareShort ? esc(v.compareShort) : "—"}</td>
       </tr>`;
@@ -72,62 +76,58 @@ function variantRows(p) {
     .join("");
 }
 
-function detailBlock(p) {
-  const badge = stockBadge(p, "d-stock");
-  const soldRow = p.soldQty != null ? `<tr><td class="k">Vendidas</td><td>${p.soldQty} u.</td></tr>` : "";
+function detailBlock(p, tr, lang) {
+  const badge = stockBadge(p, "d-stock", tr);
+  const soldRow = p.soldQty != null ? `<tr><td class="k">${tr.sold}</td><td>${p.soldQty} u.</td></tr>` : "";
   return `<section class="detail">
     <div class="d-head">
       <div class="d-img">${p.mainImage ? `<img src="${esc(p.mainImage)}">` : ""}</div>
       <div class="d-info">
         <h3>${esc(p.name)}</h3>
-        <div class="price big">${esc(priceLabel(p))}</div>
+        <div class="price big">${esc(priceLabel(p, tr, lang))}</div>
         ${badge}
         <table class="kv">
-          <tr><td class="k">ID producto</td><td>${esc(p.id)}</td></tr>
-          <tr><td class="k">Marca</td><td>${esc(p.brand || "—")}</td></tr>
-          <tr><td class="k">URL</td><td>${esc(p.url)}</td></tr>
-          <tr><td class="k">Categoría</td><td>${esc(categoryLine(p, true))}</td></tr>
+          <tr><td class="k">${tr.productId}</td><td>${esc(p.id)}</td></tr>
+          <tr><td class="k">${tr.brandField}</td><td>${esc(p.brand || "—")}</td></tr>
+          <tr><td class="k">${tr.urlField}</td><td>${esc(p.url)}</td></tr>
+          <tr><td class="k">${tr.categoryField}</td><td>${esc(categoryLine(p, true, tr))}</td></tr>
           ${
             p.variants.length
-              ? `<tr><td class="k">Variantes</td><td>${p.variants.length}${
-                  p.stockTotal != null ? ` (stock total: ${p.stockTotal} u.)` : ""
+              ? `<tr><td class="k">${tr.variantsField}</td><td>${p.variants.length}${
+                  p.stockTotal != null ? tr.stockTotalParen(p.stockTotal) : ""
                 }</td></tr>`
               : ""
           }
           ${soldRow}
-          <tr><td class="k">SEO title</td><td>${esc(p.seoTitle || "—")}</td></tr>
-          <tr><td class="k">Meta description</td><td>${esc(truncate(p.metaDescription, 90))}</td></tr>
+          <tr><td class="k">${tr.seoTitle}</td><td>${esc(p.seoTitle || "—")}</td></tr>
+          <tr><td class="k">${tr.metaDescription}</td><td>${esc(truncate(p.metaDescription, 90))}</td></tr>
         </table>
       </div>
     </div>
-    <div class="d-sec">Descripción</div>
+    <div class="d-sec">${tr.description}</div>
     <p class="d-desc">${esc(p.description || "—")}</p>
     ${
       p.variants.length
-        ? `<div class="d-sec">Variantes y stock</div>
+        ? `<div class="d-sec">${tr.variantsAndStock}</div>
     <table class="vtable">
-      <thead><tr><th>${esc(
-        p.sizeOptionName
-      )}</th><th>SKU</th><th>Stock</th><th>Disp.</th><th>Precio</th><th>Promo</th><th>Compare-at</th></tr></thead>
-      <tbody>${variantRows(p)}</tbody>
+      <thead><tr><th>${esc(p.sizeOptionName)}</th><th>${tr.sku}</th><th>${tr.stockLabel}</th><th>${
+            tr.availabilityShort
+          }</th><th>${tr.price}</th><th>${tr.promo}</th><th>${tr.compareAt}</th></tr></thead>
+      <tbody>${variantRows(p, tr, lang)}</tbody>
     </table>`
         : ""
     }
-    ${
-      p.payDiscount
-        ? `<div class="paynote"><b>Precio con descuento por pago:</b> ${esc(
-            p.payDiscount
-          )} (transferencia / efectivo)</div>`
-        : ""
-    }
+    ${p.payDiscount ? `<div class="paynote">${tr.payDiscountNote(esc(p.payDiscount))}</div>` : ""}
   </section>`;
 }
 
 // Dataset compacto embebido para la comparación (sin descripciones ni imágenes).
+// No lleva `lang`: el dataset es datos, no presentación — se compara igual sin
+// importar en qué idioma se generó el reporte que lo contiene.
 function buildDataset(meta) {
   return {
     skill: "scrap",
-    version: "2.1.0",
+    version: "2.2.0",
     platform: meta.platform || "tiendanube",
     brand: meta.brand,
     source: meta.source,
@@ -148,13 +148,15 @@ function buildDataset(meta) {
 }
 
 function buildCatalogHtml(meta) {
+  const lang = meta.lang === "en" ? "en" : "es";
+  const tr = t(lang);
   const products = meta.products;
   const inStock = products.filter((p) => p.available).length;
-  const grid = products.map(gridCard).join("\n");
-  const details = products.map(detailBlock).join("\n");
+  const grid = products.map((p) => gridCard(p, tr, lang)).join("\n");
+  const details = products.map((p) => detailBlock(p, tr, lang)).join("\n");
   const dataset = buildDataset(meta);
 
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+  return `<!doctype html><html lang="${tr.htmlLang}"><head><meta charset="utf-8">
 <script type="application/json" id="scrap-data">${JSON.stringify(dataset)}</script>
 <style>
   * { box-sizing: border-box; }
@@ -211,49 +213,44 @@ function buildCatalogHtml(meta) {
   .section-break { break-before: page; }
 </style></head><body>
   <div class="cover">
-    <h1>Scrap ${esc(meta.brand)}</h1>
-    <div class="c1">Catálogo scrapeado desde ${esc(new URL(meta.source).hostname)} · ${esc(
-    meta.platformLabel || "Tienda Nube"
-  )}</div>
-    <div class="c2">${products.length} productos${
-    meta.summary.stockTotal != null ? ` · stock total ${fmtInt(meta.summary.stockTotal)} u.` : ""
-  } · rango ${fmtPrice(meta.summary.minPrice)}–${fmtPrice(meta.summary.maxPrice)}${
+    <h1>${esc(tr.catalogTitle(meta.brand))}</h1>
+    <div class="c1">${esc(tr.scrapedFrom(new URL(meta.source).hostname, meta.platformLabel || "Tienda Nube"))}</div>
+    <div class="c2">${esc(tr.productsCount(products.length))}${
+    meta.summary.stockTotal != null ? ` · ${esc(tr.stockTotalInline(fmtInt(meta.summary.stockTotal, lang)))}` : ""
+  } · ${esc(tr.priceRangeInline(fmtPrice(meta.summary.minPrice, lang), fmtPrice(meta.summary.maxPrice, lang)))}${
     meta.currency && meta.currency !== "ARS" ? " " + esc(meta.currency) : ""
   }</div>
   </div>
   <div class="wrap">
-    <h2>Resumen</h2>
+    <h2>${tr.summary}</h2>
     <table class="summary">
-      <tr><td class="k">Productos scrapeados</td><td>${products.length}</td></tr>
+      <tr><td class="k">${tr.scrapedProducts}</td><td>${products.length}</td></tr>
       ${
         meta.summary.stockTotal != null
-          ? `<tr><td class="k">Stock total (unidades)</td><td>${fmtInt(meta.summary.stockTotal)}</td></tr>`
-          : `<tr><td class="k">Stock numérico</td><td>no público en esta plataforma (solo disponibilidad)</td></tr>`
+          ? `<tr><td class="k">${tr.stockTotalUnits}</td><td>${fmtInt(meta.summary.stockTotal, lang)}</td></tr>`
+          : `<tr><td class="k">${tr.numericStock}</td><td>${tr.numericStockNotPublic}</td></tr>`
       }
-      <tr><td class="k">Productos disponibles</td><td>${inStock}</td></tr>
-      <tr><td class="k">Productos agotados</td><td>${products.length - inStock}</td></tr>
-      <tr><td class="k">Rango de precios</td><td>${fmtPrice(meta.summary.minPrice)} – ${fmtPrice(
-    meta.summary.maxPrice
+      <tr><td class="k">${tr.availableProducts}</td><td>${inStock}</td></tr>
+      <tr><td class="k">${tr.outOfStockProducts}</td><td>${products.length - inStock}</td></tr>
+      <tr><td class="k">${tr.priceRange}</td><td>${fmtPrice(meta.summary.minPrice, lang)} – ${fmtPrice(
+    meta.summary.maxPrice,
+    lang
   )}${meta.currency ? " " + esc(meta.currency) : ""}</td></tr>
-      <tr><td class="k">Fuente</td><td>${esc(new URL(meta.source).hostname)} (${esc(
+      <tr><td class="k">${tr.source}</td><td>${esc(new URL(meta.source).hostname)} (${esc(
     meta.platformLabel || "Tienda Nube"
   )})</td></tr>
-      <tr><td class="k">Fecha y hora del scrap</td><td>${fmtDateTime(meta.scrapedAt)}</td></tr>
+      <tr><td class="k">${tr.scrapedAt}</td><td>${fmtDateTime(meta.scrapedAt, lang)}</td></tr>
     </table>
-    <p class="fields"><b>Campos extraídos por producto</b> (según lo que la plataforma hace
-    público): ID, nombre, marca, URL, breadcrumb (categoría), título SEO, meta description,
-    descripción, imagen principal, precio (mínimo y máximo), precio promocional, compare-at
-    price, descuento por pago, unidades vendidas, disponibilidad, y por cada variante:
-    talle/opciones, SKU, stock e imagen.</p>
+    <p class="fields"><b>${tr.fieldsExtracted}</b> ${tr.fieldsExtractedBody}</p>
 
     <div class="section-break"></div>
-    <h2>Grilla de productos</h2>
-    <p class="sub">Vista resumida de todos los productos. Detalle ampliado en la sección siguiente.</p>
+    <h2>${tr.productGrid}</h2>
+    <p class="sub">${tr.productGridSub}</p>
     <div class="grid">${grid}</div>
 
     <div class="section-break"></div>
-    <h2>Detalle por producto</h2>
-    <p class="sub">Ficha completa con tabla de variantes, stock por talle, precios y SEO.</p>
+    <h2>${tr.productDetail}</h2>
+    <p class="sub">${tr.productDetailSub}</p>
     ${details}
   </div>
 </body></html>`;

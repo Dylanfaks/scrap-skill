@@ -1,6 +1,6 @@
 {
   "name": "scrap-skill",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "description": "Claude Code skill: scrape any online store's public catalog (Tienda Nube, Shopify, WooCommerce or generic structured data) into a PDF+HTML report, and compare snapshots over time to estimate sales. / Skill de Claude Code: scrapea el catálogo público de cualquier tienda online y estima ventas comparando scraps.",
   "type": "commonjs",

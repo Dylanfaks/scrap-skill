@@ -2,6 +2,19 @@
 
 All notable changes to this skill are documented here.
 
+## [2.2.0] — 2026-08-18
+
+Bilingual reports.
+
+- **`--lang es|en` on `scrape.js` and `compare.js`** — every HTML and PDF report can now be
+  generated in Spanish (default) or English. Only interface labels are translated (headers,
+  table columns, footnotes); scraped content — product names, brands, descriptions,
+  categories — is always kept exactly as the store publishes it, in whatever language that is.
+- `compare.js --lang` is independent from the language the input scraps were generated in:
+  mix a Spanish catalog scrape with an English sales report, or vice versa.
+- New `scripts/lib/i18n.js` dictionary; `format.js`'s locale-aware helpers (`fmtPrice`,
+  `fmtDateTime`, etc.) now accept the target language.
+
 ## [2.1.0] — 2026-08-17
 
 Standalone-friendly CLI: the scripts now work great outside Claude Code too.
